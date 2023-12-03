@@ -161,5 +161,9 @@ europe=raster("ESTAT_OBS-VALUE-T_2021_V1-0.tiff")  # read GeoTIFF file
 europe
 
 # Output map
-europe=populatiomap(as.matrix(europe))
-writeTIFF(europe, "europeout.tif", compression='LZW', bits.per.sample=16)
+europe=populatiomap(as.matrix(europe), inwidth=100, outwidth=50)
+writeTIFF(europe, "europe.tif", compression='LZW', bits.per.sample=16)
+
+pal=colorRampPalette(c(rgb(0,0,0.1), rgb(0.5,.5,0.5), rgb(1,1,0.7)))
+image(t(europe[nrow(europe):1,]), col=pal(3), useRaster=TRUE,
+      asp=nrow(europe)/ncol(europe), axes=FALSE)
