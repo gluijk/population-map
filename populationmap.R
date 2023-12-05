@@ -6,6 +6,8 @@
 populatiomap=function(map, shape='circle', shapestyle='solid', 
                       mapstyle='filled', grid='none',
                       inwidth=100, outwidth=100, overlap=1, gamma=1) {
+    # map must be a matrix with data values that will be summarized
+    #   NA values will define the limits of a geographical map
     # shape='circle', 'square', 'none'
     # shapestyle='solid', 'outline', 'none'
     # mapstyle='filled', 'contour', 'none'
