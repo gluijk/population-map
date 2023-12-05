@@ -3,9 +3,11 @@
 # https://www.overfitting.net/
 
 
-populatiomap=function(map, shape='circle', mapstyle='filled', grid='none',
+populatiomap=function(map, shape='circle', shapestyle='solid', 
+                      mapstyle='filled', grid='none',
                       inwidth=100, outwidth=100, overlap=1, gamma=1) {
     # shape='circle', 'square', 'none'
+    # shapestyle='solid', 'outline', 'none'
     # mapstyle='filled', 'contour', 'none'
     # grid='none', 'centre', 'wrap'
     # inwidth: input grid size in pixels
@@ -16,10 +18,11 @@ populatiomap=function(map, shape='circle', mapstyle='filled', grid='none',
     require(raster)  # resample
     require(tiff)  # save 16-bit TIFF's
     require(png)  # save 8-bit PNG's
-
+    
     FILLEDVALUE=0.5  # background map and grid colours
     GRIDVALUE=0.25
-
+    STROKE=3  # width of circles/squares
+    
     # Extend matrix to fit in output size (integer number of cells)
     DIMY=nrow(map)
     DIMX=ncol(map)
@@ -36,8 +39,9 @@ populatiomap=function(map, shape='circle', mapstyle='filled', grid='none',
     filled[!is.na(filled)]=1  # set land areas to 1
     filled[is.na(filled)]=0  # set sea areas from NA to 0
     # Resample filled map only if needed
-    if (outwidth!=inwidth) {
-        print("Warning: input and output grid sizes differ, resampling map...")
+    if (outwidth!=inwidth &
+        ((mapstyle=='filled'|mapstyle=='contour') | (grid=='centre'|grid=='wrap')) ) {
+        print("Input and output grid sizes differ, resampling map...")
         # raster(filled) is a raster created with extent: 0, 1, 0, 1
         filledrs=raster(nrow=NGRIDY*outwidth, ncol=NGRIDX*outwidth, 
                         xmn=0, xmx=1, ymn=0, ymx=1)  # extent: 0, 1, 0, 1
@@ -48,7 +52,7 @@ populatiomap=function(map, shape='circle', mapstyle='filled', grid='none',
         filled[filled>=0.5]=1
         filled[filled<0.5]=0
         DIMY=nrow(filled)  # output new working dimensions
-        DIMX=ncol(filled) 
+        DIMX=ncol(filled)
     }
     
     
@@ -72,33 +76,47 @@ populatiomap=function(map, shape='circle', mapstyle='filled', grid='none',
     writeTIFF((mapavg/max(mapavg))^(1/gamma), "mapavg.tif",
               compression='LZW', bits.per.sample=16)
     rm(map)
-    
+    mapout=matrix(0, nrow=NGRIDY*outwidth, ncol=NGRIDX*outwidth)
     
     # Draw output map shapes
-    mapout=matrix(0, nrow=NGRIDY*outwidth, ncol=NGRIDX*outwidth)
-    MAXD=outwidth*overlap  # max diameter of circles/squares into cells
-    MAXPOP=max(mapavg)  # people on most populated cell
     # shape='circle', 'square', 'none'
-    for (i in 1:NGRIDX) {
-        x0=outwidth*(i-1)+outwidth/2  # decimal figure
-        for (j in 1:NGRIDY) {
-            R=(mapavg[j,i]/MAXPOP)^0.5 * MAXD/2  # square area proportional to population
-            if (R) {
-                y0=outwidth*(j-1)+outwidth/2  # decimal figure
-                if (shape=='circle') {
-                    for (x in round(x0-R):round(x0+R)) {
-                        for (y in round(y0-R):round(y0+R)) {
-                            if ( ((x-x0)^2 + (y-y0)^2 )^0.5 < R) mapout[y,x]=mapout[y,x]+1
+    # shapestyle='solid', 'outline', 'none'
+    if ((shape=='circle'|shape=='square') & (shapestyle=='solid'|shapestyle=='outline')) {
+        MAXD=outwidth*overlap  # max diameter of circles/squares into cells
+        MAXPOP=max(mapavg)  # people on most populated cell
+        THICK=round(STROKE/2)-1  # variable thickness not yet implemented
+        for (i in 1:NGRIDX) {
+            x0=outwidth*(i-1)+outwidth/2  # decimal figure
+            for (j in 1:NGRIDY) {
+                R=(mapavg[j,i]/MAXPOP)^0.5 * MAXD/2  # square area proportional to population
+                if (R) {
+                    y0=outwidth*(j-1)+outwidth/2  # decimal figure
+                    if (shape=='circle' & shapestyle=='solid') {
+                        for (x in round(x0-R):round(x0+R)) {
+                            for (y in round(y0-R):round(y0+R)) {
+                                if ( ((x-x0)^2 + (y-y0)^2 )^0.5 < R) mapout[y,x]=mapout[y,x]+1  # differentiated overlap
+                            }
                         }
+                    } else if (shape=='circle' & shapestyle=='outline') {
+                        for (x in round(x0-R-1):round(x0+R+1)) {
+                            for (y in round(y0-R-1):round(y0+R+1)) {
+                                if ( ((x-x0)^2 + (y-y0)^2 )^0.5 < R+1 &
+                                     ((x-x0)^2 + (y-y0)^2 )^0.5 > R-1) mapout[y,x]=1
+                            }
+                        }
+                    } else if (shape=='square' & shapestyle=='solid') {
+                        mapout[round(y0-R):round(y0+R), round(x0-R):round(x0+R)]=1
+                    } else if (shape=='square' & shapestyle=='outline') {
+                        mapout[round(y0-R-1):round(y0+R+1), round(x0-R-1):round(x0-R+1)]=1
+                        mapout[round(y0-R-1):round(y0+R+1), round(x0+R-1):round(x0+R+1)]=1
+                        mapout[round(y0-R-1):round(y0-R+1), round(x0-R-1):round(x0+R+1)]=1
+                        mapout[round(y0+R-1):round(y0+R+1), round(x0-R-1):round(x0+R+1)]=1
                     }
-                } else if (shape=='square') {
-                    mapout[round(y0-R):round(y0+R), round(x0-R):round(x0+R)]=1
                 }
             }
         }
     }
-    if (shape=='square' & overlap>1)
-        print("Warning: 'square' plot with overlap>1 not recommended")
+    if (shape=='square' & overlap>1) print("Warning: 'square' plot with overlap>1 not recommended")
     mapplot=mapout  # preserve only shapes (needed for grid)
     
     
@@ -115,9 +133,9 @@ populatiomap=function(map, shape='circle', mapstyle='filled', grid='none',
         # 1 pixel thickness contour
         contour[2:(DIMY-1), 2:(DIMX-1)]=
             abs(filled[1:(DIMY-2), 2:(DIMX-1)] -
-                filled[2:(DIMY-1), 2:(DIMX-1)]) +
+                    filled[2:(DIMY-1), 2:(DIMX-1)]) +
             abs(filled[2:(DIMY-1), 1:(DIMX-2)] -
-                filled[2:(DIMY-1), 2:(DIMX-1)])
+                    filled[2:(DIMY-1), 2:(DIMX-1)])
         # increase to 3 pixel thickness contour
         contour[2:(DIMY-1), 2:(DIMX-1)]=contour[2:(DIMY-1), 2:(DIMX-1)]+
             contour[1:(DIMY-2), 2:(DIMX-1)]+contour[3:(DIMY-0), 2:(DIMX-1)]+
@@ -137,13 +155,13 @@ populatiomap=function(map, shape='circle', mapstyle='filled', grid='none',
     if (grid=='centre') {
         indices=which(  # plot grid
             ( (!(row(mapout)+round(outwidth/2))%%outwidth & col(mapout)%%2)
-            | (!(col(mapout)+round(outwidth/2))%%outwidth & row(mapout)%%2))
+              | (!(col(mapout)+round(outwidth/2))%%outwidth & row(mapout)%%2))
             & filled==1 & mapplot==0)
         mapout[indices]=GRIDVALUE   
     } else if (grid=='wrap') {
         indices=which(  # plot grid
             ( (!row(mapout)%%outwidth & col(mapout)%%2)
-            | (!col(mapout)%%outwidth & row(mapout)%%2))
+              | (!col(mapout)%%outwidth & row(mapout)%%2))
             & filled==1 & mapplot==0)
         mapout[indices]=GRIDVALUE
     }
@@ -161,7 +179,8 @@ europe=raster("ESTAT_OBS-VALUE-T_2021_V1-0.tiff")  # read GeoTIFF file
 europe
 
 # Output map
-europe=populatiomap(as.matrix(europe), inwidth=100, outwidth=50)
+europe=populatiomap(as.matrix(europe), inwidth=100, outwidth=60, shape='circle', shapestyle='outline',
+                    mapstyle='contour', grid='centre', overlap=1.2)
 writeTIFF(europe, "europe.tif", compression='LZW', bits.per.sample=16)
 
 pal=colorRampPalette(c(rgb(0,0,0.1), rgb(0.5,.5,0.5), rgb(1,1,0.7)))
