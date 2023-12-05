@@ -3,9 +3,9 @@
 # https://www.overfitting.net/
 
 
-populatiomap=function(map, shape='circle', shapestyle='solid', 
-                      mapstyle='solid', grid='none',
-                      inwidth=100, outwidth=100, overlap=1, gamma=1) {
+populatiomap=function(map,
+          shape='circle', shapestyle='solid', mapstyle='solid', grid='none',
+          inwidth=100, outwidth=100, overlap=1, gamma=1) {
     # map must be a matrix with data values that will be summarized
     #   NA values will define the limits of a geographical map
     # shape='circle', 'square', 'none'
@@ -14,7 +14,7 @@ populatiomap=function(map, shape='circle', shapestyle='solid',
     # grid='none', 'centre', 'wrap'
     # inwidth: input grid size in pixels
     # outwidth: output grid size in pixels (inwidth=outwidth avoids resampling)
-    # overlap: how much a square or circle can overlap its neighbours
+    # overlap: how much a square/circle can overlap its neighbours
     # gamma: output gamma lift curve
     
     require(raster)  # resample
@@ -172,7 +172,8 @@ populatiomap=function(map, shape='circle', shapestyle='solid',
 }
 
 
-# Usage example. Map is built monochrome, colours must be added afterwards
+
+# Usage example. Output map is non antialiased grayscale, colours must be added afterwards
 
 library(raster)  # https://cran.r-project.org/web/packages/raster/raster.pdf
 
