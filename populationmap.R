@@ -4,13 +4,13 @@
 
 
 populatiomap=function(map, shape='circle', shapestyle='solid', 
-                      mapstyle='filled', grid='none',
+                      mapstyle='solid', grid='none',
                       inwidth=100, outwidth=100, overlap=1, gamma=1) {
     # map must be a matrix with data values that will be summarized
     #   NA values will define the limits of a geographical map
     # shape='circle', 'square', 'none'
     # shapestyle='solid', 'outline', 'none'
-    # mapstyle='filled', 'contour', 'none'
+    # mapstyle='solid', 'outline', 'none'
     # grid='none', 'centre', 'wrap'
     # inwidth: input grid size in pixels
     # outwidth: output grid size in pixels (inwidth=outwidth avoids resampling)
@@ -42,7 +42,7 @@ populatiomap=function(map, shape='circle', shapestyle='solid',
     filled[is.na(filled)]=0  # set sea areas from NA to 0
     # Resample filled map only if needed
     if (outwidth!=inwidth &
-        ((mapstyle=='filled'|mapstyle=='contour') | (grid=='centre'|grid=='wrap')) ) {
+        ((mapstyle=='solid'|mapstyle=='outline') | (grid=='centre'|grid=='wrap')) ) {
         print("Input and output grid sizes differ, resampling map...")
         # raster(filled) is a raster created with extent: 0, 1, 0, 1
         filledrs=raster(nrow=NGRIDY*outwidth, ncol=NGRIDX*outwidth, 
@@ -123,13 +123,13 @@ populatiomap=function(map, shape='circle', shapestyle='solid',
     
     
     # Draw contour/filled map
-    # mapstyle='filled', 'contour', 'none'
-    if (mapstyle=='filled') {
+    # mapstyle='solid', 'outline', 'none'
+    if (mapstyle=='solid') {
         writePNG(filled, "mapfilled.png")
         
         indices=which(filled==1 & mapout==0)  # plot filled
         mapout[indices]=FILLEDVALUE
-    } else if (mapstyle=='contour') {
+    } else if (mapstyle=='outline') {
         # Calculate map contour (0/1 contour) from filled
         contour=filled*0
         # 1 pixel thickness contour
@@ -181,8 +181,9 @@ europe=raster("ESTAT_OBS-VALUE-T_2021_V1-0.tiff")  # read GeoTIFF file
 europe
 
 # Output map
-europe=populatiomap(as.matrix(europe), inwidth=100, outwidth=60, shape='circle', shapestyle='outline',
-                    mapstyle='contour', grid='centre', overlap=1.2)
+europe=populatiomap(as.matrix(europe), inwidth=100, outwidth=100,
+                    shape='circle', shapestyle='solid',
+                    mapstyle='solid', grid='none', overlap=1.2)
 writeTIFF(europe, "europe.tif", compression='LZW', bits.per.sample=16)
 
 pal=colorRampPalette(c(rgb(0,0,0.1), rgb(0.5,.5,0.5), rgb(1,1,0.7)))
