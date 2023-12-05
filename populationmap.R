@@ -122,7 +122,7 @@ populatiomap=function(map,
     mapplot=mapout  # preserve only shapes (needed for grid)
     
     
-    # Draw contour/filled map
+    # Draw solid/outline map
     # mapstyle='solid', 'outline', 'none'
     if (mapstyle=='solid') {
         writePNG(filled, "mapfilled.png")
@@ -135,9 +135,9 @@ populatiomap=function(map,
         # 1 pixel thickness contour
         contour[2:(DIMY-1), 2:(DIMX-1)]=
             abs(filled[1:(DIMY-2), 2:(DIMX-1)] -
-                    filled[2:(DIMY-1), 2:(DIMX-1)]) +
+                filled[2:(DIMY-1), 2:(DIMX-1)]) +
             abs(filled[2:(DIMY-1), 1:(DIMX-2)] -
-                    filled[2:(DIMY-1), 2:(DIMX-1)])
+                filled[2:(DIMY-1), 2:(DIMX-1)])
         # increase to 3 pixel thickness contour
         contour[2:(DIMY-1), 2:(DIMX-1)]=contour[2:(DIMY-1), 2:(DIMX-1)]+
             contour[1:(DIMY-2), 2:(DIMX-1)]+contour[3:(DIMY-0), 2:(DIMX-1)]+
@@ -157,13 +157,13 @@ populatiomap=function(map,
     if (grid=='centre') {
         indices=which(  # plot grid
             ( (!(row(mapout)+round(outwidth/2))%%outwidth & col(mapout)%%2)
-              | (!(col(mapout)+round(outwidth/2))%%outwidth & row(mapout)%%2))
+            | (!(col(mapout)+round(outwidth/2))%%outwidth & row(mapout)%%2))
             & filled==1 & mapplot==0)
         mapout[indices]=GRIDVALUE   
     } else if (grid=='wrap') {
         indices=which(  # plot grid
             ( (!row(mapout)%%outwidth & col(mapout)%%2)
-              | (!col(mapout)%%outwidth & row(mapout)%%2))
+            | (!col(mapout)%%outwidth & row(mapout)%%2))
             & filled==1 & mapplot==0)
         mapout[indices]=GRIDVALUE
     }
