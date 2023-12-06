@@ -21,7 +21,7 @@ populatiomap=function(map,
     require(tiff)  # save 16-bit TIFF's
     require(png)  # save 8-bit PNG's
     
-    FILLEDVALUE=0.5  # background map and grid colours
+    SOLIDVALUE=0.5  # background map and grid colours
     GRIDVALUE=0.25
     STROKE=3  # width of circles/squares
     
@@ -36,25 +36,25 @@ populatiomap=function(map,
     rm(maptmp)
     
     
-    # Calculate map filled (0/1 filled)
-    filled=map
-    filled[!is.na(filled)]=1  # set land areas to 1
-    filled[is.na(filled)]=0  # set sea areas from NA to 0
-    # Resample filled map only if needed
+    # Calculate map solid (0/1 solid)
+    solid=map
+    solid[!is.na(solid)]=1  # set land areas to 1
+    solid[is.na(solid)]=0  # set sea areas from NA to 0
+    # Resample solid map only if needed
     if (outwidth!=inwidth &
         ((mapstyle=='solid'|mapstyle=='outline') | (grid=='centre'|grid=='wrap')) ) {
         print("Input and output grid sizes differ, resampling map...")
-        # raster(filled) is a raster created with extent: 0, 1, 0, 1
-        filledrs=raster(nrow=NGRIDY*outwidth, ncol=NGRIDX*outwidth, 
+        # raster(solid) is a raster created with extent: 0, 1, 0, 1
+        solidrs=raster(nrow=NGRIDY*outwidth, ncol=NGRIDX*outwidth, 
                         xmn=0, xmx=1, ymn=0, ymx=1)  # extent: 0, 1, 0, 1
-        filled=resample(raster(filled), filledrs,
+        solid=resample(raster(solid), solidrs,
                         method='bilinear')  # bilinear is faster than ngb!
-        rm(filledrs)
-        filled=as.matrix(filled)
-        filled[filled>=0.5]=1
-        filled[filled<0.5]=0
-        DIMY=nrow(filled)  # output new working dimensions
-        DIMX=ncol(filled)
+        rm(solidrs)
+        solid=as.matrix(solid)
+        solid[solid>=0.5]=1
+        solid[solid<0.5]=0
+        DIMY=nrow(solid)  # output new working dimensions
+        DIMX=ncol(solid)
     }
     
     
@@ -125,29 +125,29 @@ populatiomap=function(map,
     # Draw solid/outline map
     # mapstyle='solid', 'outline', 'none'
     if (mapstyle=='solid') {
-        writePNG(filled, "mapfilled.png")
+        writePNG(solid, "mapsolid.png")
         
-        indices=which(filled==1 & mapout==0)  # plot filled
-        mapout[indices]=FILLEDVALUE
+        indices=which(solid==1 & mapout==0)  # plot solid
+        mapout[indices]=SOLIDVALUE
     } else if (mapstyle=='outline') {
-        # Calculate map contour (0/1 contour) from filled
-        contour=filled*0
-        # 1 pixel thickness contour
-        contour[2:(DIMY-1), 2:(DIMX-1)]=
-            abs(filled[1:(DIMY-2), 2:(DIMX-1)] -
-                filled[2:(DIMY-1), 2:(DIMX-1)]) +
-            abs(filled[2:(DIMY-1), 1:(DIMX-2)] -
-                filled[2:(DIMY-1), 2:(DIMX-1)])
-        # increase to 3 pixel thickness contour
-        contour[2:(DIMY-1), 2:(DIMX-1)]=contour[2:(DIMY-1), 2:(DIMX-1)]+
-            contour[1:(DIMY-2), 2:(DIMX-1)]+contour[3:(DIMY-0), 2:(DIMX-1)]+
-            contour[2:(DIMY-1), 1:(DIMX-2)]+contour[2:(DIMY-1), 3:(DIMX-0)]
-        contour[contour!=0]=1
-        writePNG(contour, "mapcontour.png")
+        # Calculate map outline (0/1 outline) from solid
+        outline=solid*0
+        # 1 pixel thickness outline
+        outline[2:(DIMY-1), 2:(DIMX-1)]=
+            abs(solid[1:(DIMY-2), 2:(DIMX-1)] -
+                solid[2:(DIMY-1), 2:(DIMX-1)]) +
+            abs(solid[2:(DIMY-1), 1:(DIMX-2)] -
+                solid[2:(DIMY-1), 2:(DIMX-1)])
+        # increase to 3 pixel thickness outline
+        outline[2:(DIMY-1), 2:(DIMX-1)]=outline[2:(DIMY-1), 2:(DIMX-1)]+
+            outline[1:(DIMY-2), 2:(DIMX-1)]+outline[3:(DIMY-0), 2:(DIMX-1)]+
+            outline[2:(DIMY-1), 1:(DIMX-2)]+outline[2:(DIMY-1), 3:(DIMX-0)]
+        outline[outline!=0]=1
+        writePNG(outline, "mapoutline.png")
         
-        indices=which(contour==1 & mapout==0)  # plot contour
-        indices2=which(contour==1 & mapout!=0)  # invert contour on overlapping areas
-        mapout[indices]=FILLEDVALUE
+        indices=which(outline==1 & mapout==0)  # plot outline
+        indices2=which(outline==1 & mapout!=0)  # invert outline on overlapping areas
+        mapout[indices]=SOLIDVALUE
         mapout[indices2]=1-mapout[indices2]
     }
     
@@ -158,13 +158,13 @@ populatiomap=function(map,
         indices=which(  # plot grid
             ( (!(row(mapout)+round(outwidth/2))%%outwidth & col(mapout)%%2)
             | (!(col(mapout)+round(outwidth/2))%%outwidth & row(mapout)%%2))
-            & filled==1 & mapplot==0)
+            & solid==1 & mapplot==0)
         mapout[indices]=GRIDVALUE   
     } else if (grid=='wrap') {
         indices=which(  # plot grid
             ( (!row(mapout)%%outwidth & col(mapout)%%2)
             | (!col(mapout)%%outwidth & row(mapout)%%2))
-            & filled==1 & mapplot==0)
+            & solid==1 & mapplot==0)
         mapout[indices]=GRIDVALUE
     }
     
@@ -179,9 +179,6 @@ library(raster)  # https://cran.r-project.org/web/packages/raster/raster.pdf
 
 # https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/population-distribution-demography/geostat
 europe=raster("ESTAT_OBS-VALUE-T_2021_V1-0.tiff")  # read GeoTIFF file
-europe
-
-# Output map
 europe=populatiomap(as.matrix(europe), inwidth=100, outwidth=100,
                     shape='circle', shapestyle='solid',
                     mapstyle='solid', grid='none', overlap=1.2)
@@ -190,3 +187,14 @@ writeTIFF(europe, "europe.tif", compression='LZW', bits.per.sample=16)
 pal=colorRampPalette(c(rgb(0,0,0.1), rgb(0.5,.5,0.5), rgb(1,1,0.7)))
 image(t(europe[nrow(europe):1,]), col=pal(3), useRaster=TRUE,
       asp=nrow(europe)/ncol(europe), axes=FALSE)
+
+
+
+# https://efi.int/knowledge/maps/woodproduction
+wood=raster("woodprod_average.tif")  # read GeoTIFF file
+wood=populatiomap(as.matrix(wood), inwidth=60, outwidth=60,
+                    shape='circle', shapestyle='solid', gamma=2.2,
+                    mapstyle='solid', grid='none', overlap=1)
+wood[wood<0]=0  # tweak some negative values
+writeTIFF(wood, "wood.tif", compression='LZW', bits.per.sample=16)
+
