@@ -26,6 +26,13 @@ populatiomap=function(map,
     SOLIDVALUE=0.5  # background map and grid colours
     GRIDVALUE=0.25
     STROKE=3  # width of circles/squares
+   
+    # Clip negative values to 0 (will become part of the map)
+    negatives=which(map<0 & !is.na(map))
+    if (length(negatives)) {
+        print(paste0("Warning: ",length(negatives)," negative values clipped to 0"))
+        map[negatives]=0      
+    }
     
     # Extend matrix to fit in output size (integer number of cells)
     DIMY=nrow(map)
@@ -36,15 +43,8 @@ populatiomap=function(map,
     maptmp[1:DIMY, 1:DIMX]=map
     map=maptmp
     rm(maptmp)
- 
-    # Clip negative values to 0 (will become part of the map)
-    negatives=which(map<0 & !is.na(map))
-    if (length(negatives)) {
-        print(paste0("Warning: ",length(negatives)," negative values clipped to 0"))
-        map[negatives]=0      
-    }
 
-    # Calculate map solid (0/1 solid)
+    # Calculate solid map (0/1)
     solid=map
     solid[!is.na(solid)]=1  # set land areas to 1
     solid[is.na(solid)]=0  # set sea areas from NA to 0
@@ -134,7 +134,7 @@ populatiomap=function(map,
         indices=which(solid==1 & mapout==0)  # plot solid
         mapout[indices]=SOLIDVALUE
     } else if (mapstyle=='outline') {
-        # Calculate map outline (0/1 outline) from solid
+        # Calculate outline map (0/1) from solid map
         outline=solid*0
         # 1 pixel thickness outline
         outline[2:(DIMY-1), 2:(DIMX-1)]=
