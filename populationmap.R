@@ -6,8 +6,10 @@
 populatiomap=function(map,
           shape='circle', shapestyle='solid', mapstyle='solid', grid='none',
           inwidth=100, outwidth=100, overlap=1, gamma=1) {
-    # map must be a matrix with data values that will be summarized
-    #   NA values will define the limits of a geographical map
+    # map must be a matrix where...
+    #   <0 values will be previosly clipped to 0
+    #   >=0 values will be summed
+    #   NA values will define the geographical limits of the map
     # shape='circle', 'square', 'none'
     # shapestyle='solid', 'outline', 'none'
     # mapstyle='solid', 'outline', 'none'
@@ -17,7 +19,7 @@ populatiomap=function(map,
     # overlap: how much a square/circle can overlap its neighbours
     # gamma: output gamma lift curve
     
-    require(raster)  # resample
+    require(raster)  # resample()
     require(tiff)  # save 16-bit TIFF's
     require(png)  # save 8-bit PNG's
     
@@ -34,8 +36,14 @@ populatiomap=function(map,
     maptmp[1:DIMY, 1:DIMX]=map
     map=maptmp
     rm(maptmp)
-    
-    
+ 
+    # Clip negative values to 0 (will become part of the map)
+    negatives=which(map<0 & !is.na(map))
+    if (length(negatives)) {
+        print(paste0("Warning: ",length(negatives)," negative values clipped to 0"))
+        map[negatives]=0      
+    }
+
     # Calculate map solid (0/1 solid)
     solid=map
     solid[!is.na(solid)]=1  # set land areas to 1
@@ -57,11 +65,9 @@ populatiomap=function(map,
         DIMX=ncol(solid)
     }
     
-    
-    # Process matrix
-    map[is.na(map)]=0  # set sea areas from NA to 0
-    # population=sum(map)  # 458 million people in EU
-    
+    # Set NA values to 0
+    map[is.na(map)]=0
+
     # Reduced map which will provide all output discrete values
     mapavg=matrix(0, nrow=NGRIDY, ncol=NGRIDX)
     for (i in 1:NGRIDX) {
@@ -70,7 +76,6 @@ populatiomap=function(map,
                                 ((i-1)*inwidth+1):(i*inwidth)])
         }
     }
-    
     
     # Write calculated maps
     writeTIFF((map/max(map))^(1/gamma), "map.tif",
@@ -121,7 +126,6 @@ populatiomap=function(map,
     if (shape=='square' & overlap>1) print("Warning: 'square' plot with overlap>1 not recommended")
     mapplot=mapout  # preserve only shapes (needed for grid)
     
-    
     # Draw solid/outline map
     # mapstyle='solid', 'outline', 'none'
     if (mapstyle=='solid') {
@@ -150,7 +154,6 @@ populatiomap=function(map,
         mapout[indices]=SOLIDVALUE
         mapout[indices2]=1-mapout[indices2]
     }
-    
     
     # Draw grid
     # grid='none', 'centre', 'wrap'
@@ -195,6 +198,5 @@ wood=raster("woodprod_average.tif")  # read GeoTIFF file
 wood=populatiomap(as.matrix(wood), inwidth=60, outwidth=60,
                     shape='circle', shapestyle='solid', gamma=2.2,
                     mapstyle='solid', grid='none', overlap=1)
-wood[wood<0]=0  # tweak some negative values
 writeTIFF(wood, "wood.tif", compression='LZW', bits.per.sample=16)
 
