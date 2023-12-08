@@ -9,7 +9,7 @@ populatiomap=function(map,
     # map must be a matrix where...
     #   <0 values will be previosly set to NA if not allowed
     #   >0 and <0 values will be summed
-    #   NA values will define the geographical limits of the map
+    #   NA and <0 values will define the geographical limits of the map
     # shape='circle', 'square', 'none'
     # shapestyle='solid', 'outline', 'none'
     # mapstyle='solid', 'outline', 'none'
