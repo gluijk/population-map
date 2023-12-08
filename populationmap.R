@@ -206,8 +206,6 @@ writeTIFF(wood, "wood.tif", compression='LZW', bits.per.sample=16)
 # https://download.gebco.net/
 deepwaters=raster("gebco_2023_n69.5654_s25.1807_w-25.752_e31.2891.tif")  # read GeoTIFF file
 deepwaters=populatiomap(as.matrix(deepwaters), inwidth=200, outwidth=200,
-                   shape='circle', shapestyle='solid', gamma=2.2,
+                   shape='circle', shapestyle='solid', gamma=1.0,
                    mapstyle='solid', grid='none', overlap=1, allownegative=TRUE)
 writeTIFF(deepwaters, "deepwaters.tif", compression='LZW', bits.per.sample=16)
-
-
