@@ -5,10 +5,10 @@
 
 populatiomap=function(map,
           shape='circle', shapestyle='solid', mapstyle='solid', grid='none',
-          inwidth=100, outwidth=100, overlap=1, gamma=1) {
+          inwidth=100, outwidth=100, overlap=1, allownegative=FALSE, gamma=1) {
     # map must be a matrix where...
-    #   <0 values will be previosly clipped to 0
-    #   >=0 values will be summed
+    #   <0 values will be previosly set to NA if not allowed
+    #   >0 and <0 values will be summed
     #   NA values will define the geographical limits of the map
     # shape='circle', 'square', 'none'
     # shapestyle='solid', 'outline', 'none'
@@ -17,24 +17,28 @@ populatiomap=function(map,
     # inwidth: input grid size in pixels
     # outwidth: output grid size in pixels (inwidth=outwidth avoids resampling)
     # overlap: how much a square/circle can overlap its neighbours
+    # allownegative=TRUE: <0 values allowed and plotted in different colour
     # gamma: output gamma lift curve
     
     require(raster)  # resample()
     require(tiff)  # save 16-bit TIFF's
     require(png)  # save 8-bit PNG's
     
+    POSVALUE=1
+    NEGVALUE=0.75
     SOLIDVALUE=0.5  # background map and grid colours
     GRIDVALUE=0.25
-    STROKE=3  # width of circles/squares
-   
-    # Clip negative values to 0 (will become part of the map)
-    negatives=which(map<0 & !is.na(map))
-    if (length(negatives)) {
-        print(paste0("Warning: ",length(negatives)," negative values clipped to 0"))
-        map[negatives]=0      
+
+    # Set negative values to NA if not allowed
+    if (!allownegative) {
+        negatives=which(map<0 & !is.na(map))
+        if (length(negatives)) {
+            print(paste0("Warning: ",length(negatives)," negative values set to NA"))
+            map[negatives]=NA    
+        }
     }
     
-    # Extend matrix to fit in output size (integer number of cells)
+    # Extend matrix with NA to fit in output size (integer number of cells)
     DIMY=nrow(map)
     DIMX=ncol(map)
     NGRIDY=ceiling(DIMY/inwidth)  # wrap input map to preserve all data
@@ -46,8 +50,8 @@ populatiomap=function(map,
 
     # Calculate solid map (0/1)
     solid=map
-    solid[!is.na(solid)]=1  # set land areas to 1
-    solid[is.na(solid)]=0  # set sea areas from NA to 0
+    solid[ !is.na(solid) & solid>=0]=1  # set >=0 areas to 1 (land in a map)
+    solid[(!is.na(solid) & solid<0) | is.na(solid)]=0  # set NA/negative areas to 0 (water in a map)
     # Resample solid map only if needed
     if (outwidth!=inwidth &
         ((mapstyle=='solid'|mapstyle=='outline') | (grid=='centre'|grid=='wrap')) ) {
@@ -65,10 +69,8 @@ populatiomap=function(map,
         DIMX=ncol(solid)
     }
     
-    # Set NA values to 0
-    map[is.na(map)]=0
-
-    # Reduced map which will provide all output discrete values
+    # Calculate reduced summed map which will provide all output values
+    map[is.na(map)]=0  # set NA values to 0 to allow sum()
     mapavg=matrix(0, nrow=NGRIDY, ncol=NGRIDX)
     for (i in 1:NGRIDX) {
         for (j in 1:NGRIDY) {
@@ -90,34 +92,34 @@ populatiomap=function(map,
     # shapestyle='solid', 'outline', 'none'
     if ((shape=='circle'|shape=='square') & (shapestyle=='solid'|shapestyle=='outline')) {
         MAXD=outwidth*overlap  # max diameter of circles/squares into cells
-        MAXPOP=max(mapavg)  # people on most populated cell
-        THICK=round(STROKE/2)-1  # variable thickness not yet implemented
+        MAXPOP=max(abs(mapavg))  # highest value abs
         for (i in 1:NGRIDX) {
             x0=outwidth*(i-1)+outwidth/2  # decimal figure
             for (j in 1:NGRIDY) {
-                R=(mapavg[j,i]/MAXPOP)^0.5 * MAXD/2  # square area proportional to population
+                R=(abs(mapavg[j,i])/MAXPOP)^0.5 * MAXD/2  # square area proportional to population
                 if (R) {
+                    VAL=ifelse(mapavg[j,i]>0, POSVALUE, NEGVALUE)
                     y0=outwidth*(j-1)+outwidth/2  # decimal figure
                     if (shape=='circle' & shapestyle=='solid') {
                         for (x in round(x0-R):round(x0+R)) {
                             for (y in round(y0-R):round(y0+R)) {
-                                if ( ((x-x0)^2 + (y-y0)^2 )^0.5 < R) mapout[y,x]=mapout[y,x]+1  # differentiated overlap
+                                if ( ((x-x0)^2 + (y-y0)^2 )^0.5 < R) mapout[y,x]=mapout[y,x]+VAL  # overlap
                             }
                         }
                     } else if (shape=='circle' & shapestyle=='outline') {
                         for (x in round(x0-R-1):round(x0+R+1)) {
                             for (y in round(y0-R-1):round(y0+R+1)) {
                                 if ( ((x-x0)^2 + (y-y0)^2 )^0.5 < R+1 &
-                                     ((x-x0)^2 + (y-y0)^2 )^0.5 > R-1) mapout[y,x]=1
+                                     ((x-x0)^2 + (y-y0)^2 )^0.5 > R-1) mapout[y,x]=VAL
                             }
                         }
                     } else if (shape=='square' & shapestyle=='solid') {
-                        mapout[round(y0-R):round(y0+R), round(x0-R):round(x0+R)]=1
+                        mapout[round(y0-R):round(y0+R), round(x0-R):round(x0+R)]=VAL
                     } else if (shape=='square' & shapestyle=='outline') {
-                        mapout[round(y0-R-1):round(y0+R+1), round(x0-R-1):round(x0-R+1)]=1
-                        mapout[round(y0-R-1):round(y0+R+1), round(x0+R-1):round(x0+R+1)]=1
-                        mapout[round(y0-R-1):round(y0-R+1), round(x0-R-1):round(x0+R+1)]=1
-                        mapout[round(y0+R-1):round(y0+R+1), round(x0-R-1):round(x0+R+1)]=1
+                        mapout[round(y0-R-1):round(y0+R+1), round(x0-R-1):round(x0-R+1)]=VAL
+                        mapout[round(y0-R-1):round(y0+R+1), round(x0+R-1):round(x0+R+1)]=VAL
+                        mapout[round(y0-R-1):round(y0-R+1), round(x0-R-1):round(x0+R+1)]=VAL
+                        mapout[round(y0+R-1):round(y0+R+1), round(x0-R-1):round(x0+R+1)]=VAL
                     }
                 }
             }
@@ -152,7 +154,7 @@ populatiomap=function(map,
         indices=which(outline==1 & mapout==0)  # plot outline
         indices2=which(outline==1 & mapout!=0)  # invert outline on overlapping areas
         mapout[indices]=SOLIDVALUE
-        mapout[indices2]=1-mapout[indices2]
+        mapout[indices2]=0  # 1-mapout[indices2]
     }
     
     # Draw grid
@@ -192,11 +194,19 @@ image(t(europe[nrow(europe):1,]), col=pal(3), useRaster=TRUE,
       asp=nrow(europe)/ncol(europe), axes=FALSE)
 
 
-
 # https://efi.int/knowledge/maps/woodproduction
 wood=raster("woodprod_average.tif")  # read GeoTIFF file
 wood=populatiomap(as.matrix(wood), inwidth=60, outwidth=60,
                     shape='circle', shapestyle='solid', gamma=2.2,
-                    mapstyle='solid', grid='none', overlap=1)
+                    mapstyle='solid', grid='none', overlap=1, allownegative=TRUE)
 writeTIFF(wood, "wood.tif", compression='LZW', bits.per.sample=16)
+
+
+# https://download.gebco.net/
+deepwaters=raster("gebco_2023_n69.5654_s25.1807_w-25.752_e31.2891.tif")  # read GeoTIFF file
+deepwaters=populatiomap(as.matrix(deepwaters), inwidth=200, outwidth=200,
+                   shape='circle', shapestyle='solid', gamma=2.2,
+                   mapstyle='solid', grid='none', overlap=1, allownegative=TRUE)
+writeTIFF(deepwaters/max(deepwaters), "deepwaters.tif", compression='LZW', bits.per.sample=16)
+
 
