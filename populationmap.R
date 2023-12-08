@@ -178,7 +178,8 @@ populatiomap=function(map,
 
 
 
-# Usage example. Output map is non antialiased grayscale, colours must be added afterwards
+# Usage examples
+# Output map is non antialiased grayscale, colours must be added afterwards
 
 library(raster)  # https://cran.r-project.org/web/packages/raster/raster.pdf
 
