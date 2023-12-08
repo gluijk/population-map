@@ -91,13 +91,13 @@ populatiomap=function(map,
     # shape='circle', 'square', 'none'
     # shapestyle='solid', 'outline', 'none'
     if ((shape=='circle'|shape=='square') & (shapestyle=='solid'|shapestyle=='outline')) {
-        MAXD=outwidth*overlap  # max diameter of circles/squares into cells
-        MAXPOP=max(abs(mapavg))  # highest value abs
+        MAXR=outwidth*overlap/2  # decimap figure, max radius of circles/squares
+        MAXPOP=max(abs(mapavg))  # highest abs value
         for (i in 1:NGRIDX) {
             x0=outwidth*(i-1)+outwidth/2  # decimal figure
             for (j in 1:NGRIDY) {
-                R=(abs(mapavg[j,i])/MAXPOP)^0.5 * MAXD/2  # square area proportional to population
-                if (R) {
+                if (mapavg[j,i]) {  # non-0 value exists
+                    R=MAXR * (abs(mapavg[j,i])/MAXPOP)^0.5  # square area is proportional to value
                     VAL=ifelse(mapavg[j,i]>0, POSVALUE, NEGVALUE)
                     y0=outwidth*(j-1)+outwidth/2  # decimal figure
                     if (shape=='circle' & shapestyle=='solid') {
@@ -205,7 +205,7 @@ writeTIFF(wood, "wood.tif", compression='LZW', bits.per.sample=16)
 
 # https://download.gebco.net/
 deepwaters=raster("gebco_2023_n69.5654_s25.1807_w-25.752_e31.2891.tif")  # read GeoTIFF file
-deepwaters=populatiomap(as.matrix(deepwaters), inwidth=200, outwidth=200,
+deepwaters=populatiomap(as.matrix(deepwaters), inwidth=100, outwidth=100,
                    shape='circle', shapestyle='solid', gamma=1.0,
                    mapstyle='solid', grid='none', overlap=1, allownegative=TRUE)
 writeTIFF(deepwaters, "deepwaters.tif", compression='LZW', bits.per.sample=16)
