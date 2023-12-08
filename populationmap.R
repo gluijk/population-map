@@ -24,10 +24,10 @@ populatiomap=function(map,
     require(tiff)  # save 16-bit TIFF's
     require(png)  # save 8-bit PNG's
     
-    POSVALUE=1
-    NEGVALUE=0.75
-    SOLIDVALUE=0.5  # background map and grid colours
-    GRIDVALUE=0.25
+    POSVALUE=1  # positive values colour
+    NEGVALUE=0.75  # negative values colour
+    SOLIDVALUE=0.5  # map colour
+    GRIDVALUE=0.25  # grid colour
 
     # Set negative values to NA if not allowed
     if (!allownegative) {
@@ -65,7 +65,7 @@ populatiomap=function(map,
         solid=as.matrix(solid)
         solid[solid>=0.5]=1
         solid[solid<0.5]=0
-        DIMY=nrow(solid)  # output new working dimensions
+        DIMY=nrow(solid)  # new output dimensions
         DIMX=ncol(solid)
     }
     
