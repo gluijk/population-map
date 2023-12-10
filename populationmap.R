@@ -204,8 +204,13 @@ writeTIFF(wood, "wood.tif", compression='LZW', bits.per.sample=16)
 
 
 # https://download.gebco.net/
+# The GEBCO_2023 Grid is a global terrain model for ocean and land,
+# providing elevation data, in meters, on a 15 arc-second interval grid
+# of 43200 rows x 86400 columns, giving 3,732,480,000 data points.
+# The data values are pixel-centre registered i.e. they refer to elevations,
+# in meters, at the centre of grid cells.
 deepwaters=raster("gebco_2023_n69.5654_s25.1807_w-25.752_e31.2891.tif")  # read GeoTIFF file
-deepwaters=populatiomap(as.matrix(deepwaters), inwidth=100, outwidth=100,
+deepwaters=populatiomap(as.matrix(deepwaters), inwidth=30, outwidth=30,
                    shape='circle', shapestyle='solid', gamma=1.0,
                    mapstyle='solid', grid='none', overlap=1, allownegative=TRUE)
 writeTIFF(deepwaters, "deepwaters.tif", compression='LZW', bits.per.sample=16)
